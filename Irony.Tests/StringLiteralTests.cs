@@ -135,5 +135,15 @@ namespace Irony.Tests {
       Assert.IsTrue(_token.IsError(), "Failed to detect error in multi-char sequence.");
     }
 
+    [TestMethod]
+    public void QuotedIdentifier()
+    {
+        var quotedIdentifier = new StringLiteral("quotedIdentifier");
+        quotedIdentifier.AddStartEnd("[", "]", StringOptions.NoEscapes);
+        SetTerminal(quotedIdentifier);
+
+        TryMatch(@"[a \ c]");
+        Assert.IsTrue((string)_token.Value == @"a \ c", "Failed to process double escape char at the end of the string.");
+    }
   }//class
 }//namespace
