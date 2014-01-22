@@ -26,6 +26,7 @@ namespace Irony.Interpreter {
     WaitingMoreInput, //command line only
     SyntaxError,
     RuntimeError,
+    Canceled,
     Aborted
   }
 
@@ -51,7 +52,7 @@ namespace Irony.Interpreter {
       get { return EvaluationContext.TopFrame.Values; } 
     }
     //internal, real status of interpreter. The public Status field gets updated only on exit from public methods
-    // We want to make sure external code sees interpeter as BUSY until we actually completed operation internally 
+    // We want to make sure external code sees interpreter as BUSY until we actually completed operation internally 
     private InterpreterStatus _internalStatus;     
     #endregion 
 
@@ -137,13 +138,30 @@ namespace Irony.Interpreter {
         return ParsedScript.ParserMessages;
     }
 
-    public void Abort() {
+    /// <summary>
+    /// Signals the interpreter to cancel at the next AstNode evaluation.
+    /// The script will be aborted if the <paramref name="cancelTimeout"/> is exceeded.
+    /// Use <see cref="Status"/> to determine if the script was canceled, aborted or terminated before abortion.
+    /// </summary>
+    public void Abort(TimeSpan cancelTimeout) {
       try {
+        if (_cancellationTokenSource != null)
+          _cancellationTokenSource.Cancel();
+        _cancellationTokenSource = null;
         if (WorkerThread == null) return;
-        WorkerThread.Abort();
-        WorkerThread.Join(50);
+        WorkerThread.Join(cancelTimeout);
+        if (WorkerThread.IsAlive)
+        {
+          WorkerThread.Abort();
+          Status = InterpreterStatus.Aborted;
+        }
       } catch { }
       WorkerThread = null;
+    }
+
+    public void Abort()
+    {
+      Abort(TimeSpan.FromSeconds(5));
     }
     #endregion 
 
@@ -162,20 +180,28 @@ namespace Irony.Interpreter {
 
     private void ParseAndEvaluate() {
       EvaluationContext.EvaluationTime = 0;
-      try {
+      try
+      {
         LastException = null;
-        if(ParsedScript == null) {
+        if (ParsedScript == null)
+        {
           //don't evaluate empty strings, just return
           if (Script == null || Script.Trim() == string.Empty && Status == InterpreterStatus.Ready) return;
           ParsedScript = this.Parser.Parse(Script, "source");
           CheckParseStatus();
-          if(_internalStatus != InterpreterStatus.Evaluating) return;
+          if (_internalStatus != InterpreterStatus.Evaluating) return;
         }
-        if(ParsedScript == null)
+        if (ParsedScript == null)
           return;
         EvaluateParsedScript();
         _internalStatus = InterpreterStatus.Ready;
-      } catch (Exception ex) {
+        _cancellationTokenSource = null;
+      }
+      catch (OperationCanceledException)
+      {
+        _internalStatus = InterpreterStatus.Canceled;
+      }      
+      catch (Exception ex) {
         LastException = ex;
         _internalStatus = InterpreterStatus.RuntimeError;
         if (LastException != null && RethrowExceptions)
@@ -183,10 +209,14 @@ namespace Irony.Interpreter {
       }
     }
 
+    private CancellationTokenSource _cancellationTokenSource;
+
     private void EvaluateParsedScript() {
         var iRoot = GetAstInterface();
         if (iRoot == null) return; 
         EvaluationContext.ClearLastResult();
+        _cancellationTokenSource = new CancellationTokenSource();
+        EvaluationContext.CancellationToken = _cancellationTokenSource.Token;
         var start = Environment.TickCount;
         iRoot.Evaluate(EvaluationContext, AstMode.Read);
         EvaluationContext.EvaluationTime = Environment.TickCount - start;

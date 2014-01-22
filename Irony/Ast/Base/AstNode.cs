@@ -61,9 +61,15 @@ namespace Irony.Ast {
     // exception handling implementation in base method. Otherwise, put all derived functionality
     // in EvaluateNode, or create other method(s) and set reference to it in EvaluateRef
     public virtual void Evaluate(EvaluationContext context, AstMode mode) {
-      try {
-        EvaluateRef(context, mode); 
-      } catch (RuntimeException) {
+      try
+      {
+        context.CancellationToken.ThrowIfCancellationRequested();
+        EvaluateRef(context, mode);
+      }
+      catch (OperationCanceledException) {
+        throw;
+      }
+      catch (RuntimeException) {
         throw;
       } catch (Exception ex) {
         throw new RuntimeException(ex.Message, ex, this.GetErrorAnchor()); 

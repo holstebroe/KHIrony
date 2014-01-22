@@ -84,6 +84,7 @@
     <Compile Include="FreeTextLiteralTests.cs" />
     <Compile Include="IdentifierTerminalTests.cs" />
     <Compile Include="IntegrationTests.cs" />
+    <Compile Include="Interpreter\EvaluateAsyncTests.cs" />
     <Compile Include="NumberLiteralTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RegExLiteralTests.cs" />

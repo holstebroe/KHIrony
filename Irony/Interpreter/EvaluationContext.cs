@@ -48,6 +48,7 @@ namespace Irony.Interpreter {
     public StackFrame TopFrame, CurrentFrame;
     public StringBuilder OutputBuffer = new StringBuilder();
     public int EvaluationTime;
+    public CancellationToken CancellationToken { get; set; }
 
     public EvaluationContext(LanguageRuntime runtime) {
       Runtime = runtime;
@@ -72,7 +73,7 @@ namespace Irony.Interpreter {
       get { return LastResult != Runtime.Unassigned; }
     }
 
-    public void PushFrame(string methodName, AstNode node, StackFrame parent) {
+      public void PushFrame(string methodName, AstNode node, StackFrame parent) {
       CurrentFrame = new StackFrame(this, methodName, CurrentFrame, parent);
     }
     public void PopFrame() {
