@@ -159,7 +159,7 @@ namespace Irony.Interpreter {
           _cancellationTokenSource.Cancel();
         _cancellationTokenSource = null;
         if (WorkerThread == null) return;
-        WorkerThread.Join(cancelTimeout);
+        WorkerThread.Join((int) cancelTimeout.TotalMilliseconds);
         if (WorkerThread.IsAlive) WorkerThread.Abort();
       } catch { }
       WorkerThread = null;
