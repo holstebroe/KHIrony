@@ -10,31 +10,34 @@ using NUnit.Framework;
 
 namespace Irony.Tests.Interpreter
 {
-    public class MiniGrammar : Grammar
+  public class MiniGrammar : Grammar
+  {
+    public MiniGrammar()
     {
-        public MiniGrammar()
-        {
-            // 1. Terminals
-            var identifier = new IdentifierTerminal("id");
+      // 1. Terminals
+      var identifier = new IdentifierTerminal("id");
+      var number = new NumberLiteral("number");
 
-            // 2. Non-terminals
-            var StmtList = new NonTerminal("StmtList", typeof(StatementListNode));
-            var Stmt = new NonTerminal("Stmt");
-            var FunctionCall = new NonTerminal("FunctionCall", typeof (FunctionCallNode));
+      // 2. Non-terminals
+      var StmtList = new NonTerminal("StmtList", typeof(StatementListNode));
+      var Stmt = new NonTerminal("Stmt");
+      var Expr = new NonTerminal("Expr");
+      var FunctionCall = new NonTerminal("FunctionCall", typeof (FunctionCallNode));
 
-            // 3. BNF rules
-            StmtList.Rule = MakePlusRule(StmtList, Stmt);
-            Stmt.Rule = FunctionCall + ToTerm(";");
-            FunctionCall.Rule = identifier + "(" + ")";
+      // 3. BNF rules
+      StmtList.Rule = MakePlusRule(StmtList, Stmt);
+      Stmt.Rule = Expr + ToTerm(";");
+      Expr.Rule = FunctionCall | number;
+      FunctionCall.Rule = identifier + "(" + ")";
 
-            MarkPunctuation("(", ")", ";");
-            RegisterBracePair("(", ")");
-            MarkTransient(Stmt);
+      MarkPunctuation("(", ")", ";");
+      RegisterBracePair("(", ")");
+      MarkTransient(Stmt, Expr);
 
-            Root = StmtList;
-            LanguageFlags = LanguageFlags.CreateAst;
-        }
+      Root = StmtList;
+      LanguageFlags = LanguageFlags.CreateAst;
     }
+  }
 
     [TestFixture]
     public class EvaluateAsyncTests
@@ -80,17 +83,28 @@ namespace Irony.Tests.Interpreter
       }
 
       [Test]
-      public void WaitHandleWillBeReleasedWhenScriptCompletes()
+      public void WaitHandleWillBeSetWhenScriptCompletes()
       {
         var interpreter = new ScriptInterpreter(new MiniGrammar());
         bool func2IsCalled = false;
-        interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func1"), new ActionCallTarget(() => Thread.Sleep(500)));
+        interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func1"), new ActionCallTarget(() => Thread.Sleep(0)));
         interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func2"), new ActionCallTarget(() => func2IsCalled = true));
         interpreter.EvaluateAsync("func1();func2();");
         interpreter.WaitHandle.WaitOne();
 
         Assert.That(interpreter.Status, Is.EqualTo(InterpreterStatus.Ready));
         Assert.That(func2IsCalled, Is.True);        
+      }
+
+      [Test]
+      public void LastResultContainsLastExpressionWhenScriptCompletes()
+      {
+        var interpreter = new ScriptInterpreter(new MiniGrammar());
+        interpreter.EvaluateAsync("5;42;");
+        interpreter.WaitHandle.WaitOne();
+
+        Assert.That(interpreter.Status, Is.EqualTo(InterpreterStatus.Ready));
+        Assert.That(interpreter.EvaluationContext.LastResult, Is.EqualTo(42));
       }
 
       [Test]
