@@ -29,7 +29,9 @@ namespace Irony.Ast {
       base.Init(context, treeNode);
       TargetRef = AddChild("Target", treeNode.ChildNodes[0]);
       _targetName = treeNode.ChildNodes[0].FindTokenAndGetText(); 
-      Arguments = AddChild("Args", treeNode.ChildNodes[1]);
+      // Arguments are optionally
+      if (treeNode.ChildNodes.Count > 1)
+        Arguments = AddChild("Args", treeNode.ChildNodes[1]);
       AsString = "Call " + _targetName;
     }
 
@@ -38,7 +40,8 @@ namespace Irony.Ast {
       var target = context.Data.Pop() as ICallTarget;
       if (target == null)
         context.ThrowError(Resources.ErrVarIsNotCallable, _targetName);
-      Arguments.Evaluate(context, AstMode.Read);
+      if (Arguments != null)
+          Arguments.Evaluate(context, AstMode.Read);
       target.Call(context);
     }
 
