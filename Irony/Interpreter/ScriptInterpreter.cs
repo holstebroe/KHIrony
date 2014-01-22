@@ -43,7 +43,13 @@ namespace Irony.Interpreter {
     public InterpreterStatus Status { get; private set; }
     
     public bool RethrowExceptions = true;
-    public bool PrintParseErrors = true; 
+    public bool PrintParseErrors = true;
+
+    private CancellationTokenSource _cancellationTokenSource;
+
+    private readonly ManualResetEvent _waitHandle = new ManualResetEvent(true);
+    public WaitHandle WaitHandle { get { return _waitHandle; } }
+
     public ParseMode ParseMode {
       get { return Parser.Context.Mode; }
       set { Parser.Context.Mode = value; }
@@ -79,10 +85,12 @@ namespace Irony.Interpreter {
     }
     public void Evaluate() {
       try {
+        _waitHandle.Reset();
         _internalStatus = Status = InterpreterStatus.Evaluating;
         ParseAndEvaluate(); 
       } finally {
         Status = _internalStatus;
+        _waitHandle.Set();
       }
     }
 
@@ -95,7 +103,7 @@ namespace Irony.Interpreter {
       EvaluateAsync(); 
     }
     public void EvaluateAsync() {
-      CheckNotBusy(); 
+      CheckNotBusy();
       Status = _internalStatus = InterpreterStatus.Evaluating;
       WorkerThread = new Thread(AsyncThreadStart);
       WorkerThread.Start(null);
@@ -118,7 +126,9 @@ namespace Irony.Interpreter {
         _parsedScript = value;
         _script = (_parsedScript == null ? null : _parsedScript.SourceText); 
       }
-    }  ParseTree _parsedScript; 
+    }
+
+    ParseTree _parsedScript;
 
     public bool IsBusy() {
       return Status == InterpreterStatus.Evaluating;
@@ -150,13 +160,10 @@ namespace Irony.Interpreter {
         _cancellationTokenSource = null;
         if (WorkerThread == null) return;
         WorkerThread.Join(cancelTimeout);
-        if (WorkerThread.IsAlive)
-        {
-          WorkerThread.Abort();
-          Status = InterpreterStatus.Aborted;
-        }
+        if (WorkerThread.IsAlive) WorkerThread.Abort();
       } catch { }
       WorkerThread = null;
+      WaitHandle.WaitOne();
     }
 
     public void Abort()
@@ -168,9 +175,11 @@ namespace Irony.Interpreter {
     #region private implementations -------------------------------------------------------------------------------
     private void AsyncThreadStart(object data) {
       try {
+        _waitHandle.Reset();
         ParseAndEvaluate();
       } finally {
         Status = _internalStatus;
+        _waitHandle.Set();
       }
     }
     private void CheckNotBusy() {
@@ -200,7 +209,11 @@ namespace Irony.Interpreter {
       catch (OperationCanceledException)
       {
         _internalStatus = InterpreterStatus.Canceled;
-      }      
+      }
+      catch (ThreadAbortException)
+      {
+        _internalStatus = InterpreterStatus.Aborted;
+      }
       catch (Exception ex) {
         LastException = ex;
         _internalStatus = InterpreterStatus.RuntimeError;
@@ -208,8 +221,6 @@ namespace Irony.Interpreter {
           throw;
       }
     }
-
-    private CancellationTokenSource _cancellationTokenSource;
 
     private void EvaluateParsedScript() {
         var iRoot = GetAstInterface();

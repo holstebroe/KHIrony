@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.CodeDom;
+using System.Threading;
 using System.Xml;
 using System.IO;
 using Irony.Parsing;
@@ -66,7 +67,12 @@ namespace Irony.Ast {
         context.CancellationToken.ThrowIfCancellationRequested();
         EvaluateRef(context, mode);
       }
-      catch (OperationCanceledException) {
+      catch (OperationCanceledException)
+      {
+        throw;
+      }
+      catch (ThreadAbortException)
+      {
         throw;
       }
       catch (RuntimeException) {

@@ -65,19 +65,35 @@ namespace Irony.Tests.Interpreter
         }        
       
       [Test]
-        public void ScriptIsAbortedIfNotCanceledWithinTimeout()
-        {
-            var interpreter = new ScriptInterpreter(new MiniGrammar());
-            bool func2IsCalled = false;
-            interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func1"), new ActionCallTarget(() => Thread.Sleep(500)));
-            interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func2"), new ActionCallTarget(() => func2IsCalled = true));
-            interpreter.EvaluateAsync("func1();func2();");
-            Thread.Sleep(100); // Give the parser time to finish and evaluation to start.
-            interpreter.Abort(TimeSpan.FromMilliseconds(1));
+      public void ScriptIsAbortedIfNotCanceledWithinTimeout()
+      {
+          var interpreter = new ScriptInterpreter(new MiniGrammar());
+          bool func2IsCalled = false;
+          interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func1"), new ActionCallTarget(() => Thread.Sleep(500)));
+          interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func2"), new ActionCallTarget(() => func2IsCalled = true));
+          interpreter.EvaluateAsync("func1();func2();");
+          Thread.Sleep(100); // Give the parser time to finish and evaluation to start.
+          interpreter.Abort(TimeSpan.FromMilliseconds(1));
 
-            Assert.That(interpreter.Status, Is.EqualTo(InterpreterStatus.Aborted));
-            Assert.That(func2IsCalled, Is.False);
-        }
+          Assert.That(interpreter.Status, Is.EqualTo(InterpreterStatus.Aborted));
+          Assert.That(func2IsCalled, Is.False);
+      }
+
+      [Test]
+      public void WaitHandleWillBeReleasedWhenScriptCompletes()
+      {
+        var interpreter = new ScriptInterpreter(new MiniGrammar());
+        bool func2IsCalled = false;
+        interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func1"), new ActionCallTarget(() => Thread.Sleep(500)));
+        interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func2"), new ActionCallTarget(() => func2IsCalled = true));
+        interpreter.EvaluateAsync("func1();func2();");
+        Thread.Sleep(TimeSpan.FromMilliseconds(10)); // Give the interpreter time to lock the wait handle.
+        interpreter.WaitHandle.WaitOne();
+
+        Assert.That(interpreter.Status, Is.EqualTo(InterpreterStatus.Ready));
+        Assert.That(func2IsCalled, Is.True);
+        
+      }
 
         public class ActionCallTarget : ICallTarget
         {
