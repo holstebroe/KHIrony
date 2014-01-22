@@ -104,6 +104,7 @@ namespace Irony.Interpreter {
     }
     public void EvaluateAsync() {
       CheckNotBusy();
+      _waitHandle.Reset();
       Status = _internalStatus = InterpreterStatus.Evaluating;
       WorkerThread = new Thread(AsyncThreadStart);
       WorkerThread.Start(null);
@@ -175,9 +176,13 @@ namespace Irony.Interpreter {
     #region private implementations -------------------------------------------------------------------------------
     private void AsyncThreadStart(object data) {
       try {
-        _waitHandle.Reset();
         ParseAndEvaluate();
-      } finally {
+      }
+      catch {
+        // Eat rethrown runtime exceptions. Uncaught thread exceptions may bring the whole application down.
+        // The user should check Status and LastException instead. 
+      }
+      finally {
         Status = _internalStatus;
         _waitHandle.Set();
       }

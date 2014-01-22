@@ -87,13 +87,23 @@ namespace Irony.Tests.Interpreter
         interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func1"), new ActionCallTarget(() => Thread.Sleep(500)));
         interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func2"), new ActionCallTarget(() => func2IsCalled = true));
         interpreter.EvaluateAsync("func1();func2();");
-        Thread.Sleep(TimeSpan.FromMilliseconds(10)); // Give the interpreter time to lock the wait handle.
         interpreter.WaitHandle.WaitOne();
 
         Assert.That(interpreter.Status, Is.EqualTo(InterpreterStatus.Ready));
-        Assert.That(func2IsCalled, Is.True);
-        
+        Assert.That(func2IsCalled, Is.True);        
       }
+
+      [Test]
+      public void StatusIsRunTimeErrorIfExecutionFails()
+      {
+        var interpreter = new ScriptInterpreter(new MiniGrammar());
+        interpreter.EvaluationContext.SetValue(SymbolTable.Symbols.TextToSymbol("func1"), new ActionCallTarget(() => { throw new Exception(); }));
+        interpreter.EvaluateAsync("func1();");
+        interpreter.WaitHandle.WaitOne();
+
+        Assert.That(interpreter.Status, Is.EqualTo(InterpreterStatus.RuntimeError));
+      }
+
 
         public class ActionCallTarget : ICallTarget
         {
