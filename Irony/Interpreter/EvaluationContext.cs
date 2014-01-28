@@ -92,10 +92,35 @@ namespace Irony.Interpreter {
       return false; 
     }
 
+    /// <summary>
+    /// Finds first occurrence of symbol in frame stack and overwrites the value.
+    /// If the symbol is not found, a new symbol will be created on the current frame.
+    /// </summary>
     public void SetValue(Symbol symbol, object value) {
+      var keySymbol = LanguageCaseSensitive ? symbol : symbol.LowerSymbol;
+
+      // Find topmost frame with symbol and assign value
+      var frame = CurrentFrame;
+      while (frame != null) {
+        if (frame.Values.ContainsKey(keySymbol)) {
+          frame.Values[keySymbol] = value;
+          return;
+        }
+        frame = frame.Parent;
+      }
+      // Value not found in frame stack, assign value as new local value
+      CurrentFrame.Values[keySymbol] = value; 
+    }
+
+    /// <summary>
+    /// Sets value in current frame. If the symbol already exists it will be overwritten.
+    /// This method will not look for existing symbol down the frame stack.
+    /// </summary>
+    public void SetLocalValue(Symbol symbol, object value) {
       var keySymbol = LanguageCaseSensitive ? symbol : symbol.LowerSymbol;
       CurrentFrame.Values[keySymbol] = value; 
     }
+
 
     public void Write(string text) {
       OutputBuffer.Append(text); 

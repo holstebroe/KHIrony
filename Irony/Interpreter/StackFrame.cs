@@ -23,7 +23,7 @@ namespace Irony.Interpreter {
     public string MethodName; //for debugging purposes
     public StackFrame Parent; //Lexical parent - not the same as the caller
     public StackFrame Caller;
-    internal ValuesTable Values; //global values for top frame; parameters and local variables for method frame
+    public ValuesTable Values; //global values for top frame; parameters and local variables for method frame
 
     public StackFrame(EvaluationContext context, ValuesTable globals) {
       Context = context; 
