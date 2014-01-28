@@ -9,7 +9,7 @@ namespace Irony.Tests.Interpreter
   {
     [Test]
     public void SetValueCreatesGlobalValueIfFrameStackEmpty() {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.SetValue(symbol, 42);
       var actual = sut.Globals[symbol];
@@ -18,7 +18,7 @@ namespace Irony.Tests.Interpreter
 
     [Test]
     public void SetValueOverwritesGlobalValueIfFrameStackEmpty() {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.SetValue(symbol, 42);
       sut.SetValue(symbol, 24);
@@ -28,7 +28,7 @@ namespace Irony.Tests.Interpreter
 
     [Test]
     public void SetValueOverwritesGlobalValueIfStackNotEmpty() {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.SetValue(symbol, 42);
       sut.PushFrame("x", null, sut.CurrentFrame);
@@ -40,7 +40,7 @@ namespace Irony.Tests.Interpreter
     
     [Test]
     public void SetValueCreatesLocalValueIfNotFound() {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.PushFrame("x", null, sut.CurrentFrame);
       sut.SetValue(symbol, 42);
@@ -51,7 +51,7 @@ namespace Irony.Tests.Interpreter
     [Test]
     public void SetValueOverwritesValueAtSameStackFrame()
     {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.PushFrame("x", null, sut.CurrentFrame);
       sut.SetValue(symbol, 24);
@@ -62,7 +62,7 @@ namespace Irony.Tests.Interpreter
     [Test]
     public void SetValueOverwritesValueAtLowerStackFrame()
     {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.PushFrame("x", null, sut.CurrentFrame);
       sut.SetValue(symbol, 24);
@@ -75,7 +75,7 @@ namespace Irony.Tests.Interpreter
     [Test]
     public void SetLocalValueCreatesLocalValueEvenIfSymbolExistsInLowerFrame()
     {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.PushFrame("x", null, sut.CurrentFrame);
       sut.SetValue(symbol, 24);
@@ -88,7 +88,7 @@ namespace Irony.Tests.Interpreter
     [Test]
     public void SetLocalValueOverwritesValueAtSameStackFrame()
     {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.PushFrame("x", null, sut.CurrentFrame);
       sut.SetLocalValue(symbol, 24);
@@ -99,7 +99,7 @@ namespace Irony.Tests.Interpreter
     [Test]
     public void TryGetValueReturnsTrueIfValueExistsInCurrentFrame()
     {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.SetLocalValue(symbol, 12);
       object value;
@@ -110,7 +110,7 @@ namespace Irony.Tests.Interpreter
     [Test]
     public void TryGetValueReturnsTrueIfValueExistsInLowerFrame()
     {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.SetLocalValue(symbol, 12);
       sut.PushFrame("x", null, sut.CurrentFrame);
@@ -122,7 +122,7 @@ namespace Irony.Tests.Interpreter
     [Test]
     public void TryGetValueReturnsFalseIfValueDoesNotExists()
     {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       object value;
       var actual = sut.TryGetValue(symbol, out value);
@@ -132,7 +132,7 @@ namespace Irony.Tests.Interpreter
     [Test]
     public void TryGetValueReadsValueFromTopFrameWhereFound()
     {
-      var sut = new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+      var sut = CreateContext();
       var symbol = SymbolTable.Symbols.TextToSymbol("test");
       sut.SetLocalValue(symbol, 12);
       sut.PushFrame("x", null, sut.CurrentFrame);
@@ -143,7 +143,11 @@ namespace Irony.Tests.Interpreter
       object actual;
       sut.TryGetValue(symbol, out actual);
       Assert.That(actual, Is.EqualTo(42));
-    }    
+    }
 
+    private static EvaluationContext CreateContext()
+    {
+      return new EvaluationContext(new LanguageRuntime(new LanguageData(new Grammar())));
+    }
   }
 }

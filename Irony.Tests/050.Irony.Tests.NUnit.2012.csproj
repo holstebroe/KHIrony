@@ -79,6 +79,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Ast\LocalIdentifierNodeTests.cs" />
+    <Compile Include="Ast\IdentifierNodeTests.cs" />
     <Compile Include="CommentTerminalTests.cs" />
     <Compile Include="DataLiteralsTests.cs" />
     <Compile Include="FreeTextLiteralTests.cs" />

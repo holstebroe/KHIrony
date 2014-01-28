@@ -79,6 +79,7 @@
     <Compile Include="Ast\Functions\FunctionCallNode.cs" />
     <Compile Include="Ast\Functions\FunctionDefNode.cs" />
     <Compile Include="Ast\Functions\ParamListNode.cs" />
+    <Compile Include="Ast\PrimitiveNodes\LocalIdentifierNode.cs" />
     <Compile Include="Ast\SpecialNodes\EmptyStatementNode.cs" />
     <Compile Include="Ast\Statements\AssignmentNode.cs" />
     <Compile Include="Ast\Statements\BlockNode.cs" />
